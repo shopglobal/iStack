@@ -1,8 +1,7 @@
 # iStack Core Smart Contracts
-
 <p align="center">
   <a href="#">
-      <img src="[[https://pancakeswap.finance/logo.png]()](https://avatars.githubusercontent.com/u/39810245?s=88&v=4)" height="128">
+      <img src="https://avatars.githubusercontent.com/u/39810245?s=88&v=4">
   </a>
 </p>
 
