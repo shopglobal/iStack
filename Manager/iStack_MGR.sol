@@ -156,7 +156,6 @@ contract StakeToken_DeFi_MGR is _MSG, Auth, ISTAKE_MGR {
     uint256 private constant BP = 10000;
 
     bool internal isTestnet;
-    bool internal isCrossChain;
     
     mapping(uint => address payable) internal STAKING_TOKEN;
     mapping(uint => address payable) internal REWARDS_POOL;
@@ -165,8 +164,6 @@ contract StakeToken_DeFi_MGR is _MSG, Auth, ISTAKE_MGR {
     modifier operatorOnly() virtual {
         require(isOperator(_msgSender()), "!OPS"); _;
     }
-
-    event CrossChain__Shift(address payable[] indexed stacks, uint[] distributions, bool up);
 
     constructor(bool _isTestnet, address payable _stackToken,address payable _stakingToken, address payable _rewardsToken, address payable _rewardsPool, address payable _stakePool, address payable _owner, address payable _operator) Auth(address(_msgSender()),address(_owner),address(_operator)) {
         OWNER = _owner;
@@ -209,7 +206,6 @@ contract StakeToken_DeFi_MGR is _MSG, Auth, ISTAKE_MGR {
     function RewardsPool(uint _pid) public view override returns (address payable) { return payable(REWARDS_POOL[_pid]); }
     function RewardsToken(uint _pid) public view override returns (address payable) { return payable(REWARDS_TOKEN[_pid]); }
     function Testnet() public view override returns (bool) { return isTestnet; }
-    function CrossChain() public view override returns (bool) { return isCrossChain; }
 
     function isOperator(address account) public view returns (bool) {
         if(address(account) == address(OPERATOR)){
@@ -258,12 +254,12 @@ contract StakeToken_DeFi_MGR is _MSG, Auth, ISTAKE_MGR {
         ISTAKE(STAKE_TOKEN).setManager(_manager,_poolId);
     }
 
-    function enableProcessing(bool _processing, bool crosschain, uint _poolId) public operatorOnly() {
-        require(IREWARDSPOOL(REWARDS_POOL[_poolId]).setProcessing(_processing, crosschain),"Unable to process");
+    function enableProcessing(bool _processing, uint _poolId) public operatorOnly() {
+        require(IREWARDSPOOL(REWARDS_POOL[_poolId]).setProcessing(_processing),"Unable to process");
     }
 
-    function Process_Rewards(bool crosschain, uint _poolId) public virtual override authorized() {
-        (bool success) = IREWARDSPOOL(REWARDS_POOL[_poolId]).Process_Rewards(crosschain);
+    function Process_Rewards(uint _poolId) public virtual override authorized() {
+        (bool success) = IREWARDSPOOL(REWARDS_POOL[_poolId]).Process_Rewards();
         require(success,"RP: Unable to process rewards");
     }
 
@@ -283,23 +279,6 @@ contract StakeToken_DeFi_MGR is _MSG, Auth, ISTAKE_MGR {
         }
     }
 
-    function Crosschain_Shift(address wallet, uint crosschain, bool up, uint _poolId) public virtual override authorized() {
-        IREWARDSPOOL(REWARDS_POOL[_poolId]).CrossChain_Genesis(crosschain, payable(wallet), false, up);
-    }
-    
-    function CrossChain_BulkShift(address payable[] memory stacks, uint[] memory distributions, bool up, uint _poolId) public virtual override authorized() {
-        IREWARDSPOOL(REWARDS_POOL[_poolId]).CrossChain_Genesis_Bulk(distributions, stacks, false, up);
-        emit CrossChain__Shift(stacks, distributions, up);
-    }
-
-    function RewardsPool_CrossChain_Debt(uint _poolId) public view authorized() returns (uint) {
-        return IREWARDSPOOL(REWARDS_POOL[_poolId]).CrossChain_Debt();
-    }
-
-    function RewardsPool_CrossChain_Debt_ByWallet(uint _poolId, address _wallet) public authorized() returns (uint) {
-        return IREWARDSPOOL(REWARDS_POOL[_poolId]).CrossChain_Debt_byWallet(_wallet);
-    }
-    
     function setRewardsToken(address payable token, uint _poolId) public override authorized() returns(bool,bool,bool,bool) {
         REWARDS_TOKEN[_poolId] = token;
         (bool successA) = Auth.authorize(address(REWARDS_TOKEN[_poolId]));
@@ -406,32 +385,8 @@ contract StakeToken_DeFi_MGR is _MSG, Auth, ISTAKE_MGR {
         return ISTAKEPOOL(STAKE_POOL).UnStake_Network_Tokens(address(token));
     }
 
-    function elected() public view returns(bool) {
-        bool elected_;
-        if(address(msg.sender) == address(ISTAKE(STAKE_TOKEN).Manager()) || address(_msgSender()) == address(ISTAKE(STAKE_TOKEN).Manager())){
-            elected_ = true;
-        } else if(address(msg.sender) == address(Governor()) || address(_msgSender()) == address(Governor())){
-            elected_ = true;
-        } else if(address(msg.sender) == address(Operator()) || address(_msgSender()) == address(Operator())){
-            elected_ = true;
-        } else {
-            elected_ = false;
-        }
-        return elected_;
-    }
-
-    function EJECT(uint[] memory _pools, address payable token_) public virtual authorized() {
-        uint i=0;
-        while(i<_pools.length){
-            IREWARDSPOOL(REWARDS_POOL[_pools[i]]).EJECT(token_);
-        }
-    }
-    
     function EMERGENCY_WITHDRAW_Token(address token) public  {
-        require(elected() == true);
-        if(elected() == false) { revert(); } else {
-            require(IERC20(token).transfer(OPERATOR, IERC20(token).balanceOf(address(this))));
-        }
+        require(IERC20(token).transfer(OPERATOR, IERC20(token).balanceOf(address(this))));
     }
     
     function EMERGENCY_WITHDRAW_Ether() public {

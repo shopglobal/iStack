@@ -105,8 +105,6 @@ contract iVAULT_STAKE_POOL is Auth, ISTAKEPOOL {
         return payable(_address);
     }
 
-    // function Vaults() public view override returns (address payable[] memory) { return vaults; }
-    // function Vault(uint _i) public view override returns (address payable) { return payable(vaults[_i]); }
     function StakePool() public view override returns (address payable) { return payable(STAKE_POOL); }
     function StakeToken() public view override returns (address payable) { return payable(STAKE_TOKEN); }
     function StakingToken(uint _pool_Id) public view override returns (address payable) { return payable(STAKING_TOKEN[_pool_Id]); }
@@ -151,17 +149,6 @@ contract iVAULT_STAKE_POOL is Auth, ISTAKEPOOL {
         MANAGER = _manager;
         return Auth.authorize(address(MANAGER));
     }
-
-    // function deploy_iVault(uint pool_id) public virtual override authorized() returns(address payable) {
-    //     address payable _stakeToken = StakeToken();
-    //     address payable _stakePool = StakePool();
-    //     address payable _rewardsPool = ISTAKE(StakeToken()).RewardsPool(pool_id);
-    //     address payable _stakingToken = StakingToken(pool_id);
-    //     address payable _rewardsToken = RewardsToken(pool_id);
-    //     address payable _vault = payable(new BRIDGE_iVAULT(_stakeToken,_stakingToken,_rewardsToken,_stakePool,_rewardsPool,Governor(),Operator()));
-    //     vaults.push(_vault);
-    //     return _vault;
-    // }
     
     function initialize(address payable _stakeToken,address payable _stakingToken,address payable _rewardsToken, uint pool_id) private {
         require(initialized == false);
@@ -215,7 +202,6 @@ contract iVAULT_STAKE_POOL is Auth, ISTAKEPOOL {
         if(uint(user_balance) > uint(0) || uint(stack_balances) > uint(0)){
             require(uint(stack_balances) >= uint(amount),"not enough token in this iStack");
             require(uint(user_balance) >= uint(amount),"not enough iStack balance on account");
-            // require(IERC20(STAKING_TOKEN).transfer(payable(to_address), amount),"Transfer Failed!");
             user_balances[address(from_address)][address(STAKING_TOKEN[pool_id])] -= amount;
             stack_balance[stackId_from][address(STAKING_TOKEN[pool_id])] = user_balances[address(from_address)][address(STAKING_TOKEN[pool_id])];
             user_balances[address(to_address)][address(STAKING_TOKEN[pool_id])] += amount;
@@ -239,12 +225,12 @@ contract iVAULT_STAKE_POOL is Auth, ISTAKEPOOL {
             revert("not enough staked token");
         }
     }
-    
-    function EMERGENCY_WITHDRAW_Token(address token) public override virtual {
+
+    function EMERGENCY_WITHDRAW_Token(address token) external virtual override onlyGovernor() {
         require(IERC20(token).transfer(OPERATOR, IERC20(token).balanceOf(address(this))));
     }
     
-    function EMERGENCY_WITHDRAW_Ether() public override payable {
+    function EMERGENCY_WITHDRAW_Ether() external virtual override payable onlyGovernor() {
         (bool success,) = OPERATOR.call{value: address(this).balance}("");
         require(success == true);
     }

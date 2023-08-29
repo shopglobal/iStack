@@ -260,12 +260,11 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
         return true;
     }
     
-    function EMERGENCY_WITHDRAW_Token(address _token) public override virtual {
-        uint balance = IERC20(_token).balanceOf(address(this));
-        require(IERC20(_token).transfer(OPERATOR, balance));
+    function EMERGENCY_WITHDRAW_Token(address _token) public virtual override onlyGovernor() {
+        require(IERC20(_token).transfer(OPERATOR, IERC20(_token).balanceOf(address(this))));
     }
     
-    function EMERGENCY_WITHDRAW_Ether() public override payable {
+    function EMERGENCY_WITHDRAW_Ether() public virtual override payable onlyGovernor() {
         (bool success,) = OPERATOR.call{value: address(this).balance}("");
         require(success == true);
     }
