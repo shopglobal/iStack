@@ -13,9 +13,10 @@ import "../Auth/Auth.sol";
 import "../Interfaces/ISTACK.sol";
 import "../Interfaces/ISTACK_MGR.sol";
 import "../Interfaces/ISTACK_REWARDS.sol";
+import "../Token/ERC20.sol";
 
-// REWARDS POOL v10
-contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
+// MINTABLE ERC20 REWARDS POOL v11
+contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL, ERC20 {
     /**
      * address
      */
@@ -30,10 +31,9 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
 
     address payable internal STAKE_TOKEN;
     address payable internal STAKE_POOL;
-    address payable internal REWARDS_POOL;
+    // address payable internal REWARDS_POOL;
     address payable internal STAKING_TOKEN;
     address payable internal REWARDS_TOKEN;
-    address payable internal REWARDS_POOL_ALT;
 
     uint256 public _poolId;
     uint256 private genesis;
@@ -41,8 +41,8 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
     /**
      * strings
      */
-    string constant _name = "Rewards Pool";
-    string constant _symbol = "Reward-Pool";
+    // string constant _name = "Rewards Pool";
+    // string constant _symbol = "Reward-Pool";
 
     /**
      * bools
@@ -81,12 +81,16 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
     constructor(
         address payable _stake,
         address payable _staking,
-        address payable _rewards,
+        // address payable _rewards,
         address payable _stakePool,
         address payable _owner,
         address payable _operator,
         uint256 _pool_Id
-    ) payable Auth(address(_owner), address(_operator), _msgSender()) {
+    )
+        payable
+        Auth(address(_owner), address(_operator), _msgSender())
+        ERC20("iRewards", "iREWARDS")
+    {
         _governor = payable(_operator);
         _poolId = _pool_Id;
         OWNER = _owner;
@@ -94,18 +98,30 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
         STAKE_TOKEN = _stake;
         STAKE_POOL = _stakePool;
         STAKING_TOKEN = _staking;
-        REWARDS_TOKEN = _rewards;
-        REWARDS_POOL = payable(this);
+        REWARDS_TOKEN = payable(this);
+        // REWARDS_POOL = payable(this);
         genesis = block.timestamp;
-        initialize(_stake, _rewards);
+        initialize(_stake, REWARDS_TOKEN);
     }
 
     fallback() external payable {}
 
     receive() external payable {}
 
-    function name() external pure returns (string memory) {
-        return _name;
+    function deployToken(
+        string memory __name,
+        string memory __symbol,
+        uint256 __genesis
+    ) public payable returns (address) {
+        require(uint256(msg.value) > uint256(0));
+        address payable _ERC20 = payable(
+            address(new Token(__name, __symbol, __genesis))
+        );
+        return _ERC20;
+    }
+
+    function burn(uint256 value) external {
+        super._burn(_msgSender(), value);
     }
 
     function Token_Debt() external view override returns (uint256) {
@@ -178,13 +194,13 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
         return payable(STAKING_TOKEN);
     }
 
-    function RewardsPool() public view override returns (address payable) {
-        return payable(REWARDS_POOL);
-    }
+    // function RewardsPool() public view override returns (address payable) {
+    //     return payable(this);
+    // }
 
-    function RewardsToken() public view override returns (address payable) {
-        return payable(REWARDS_TOKEN);
-    }
+    // function RewardsToken() public view override returns (address payable) {
+    //     return payable(REWARDS_TOKEN);
+    // }
 
     function isGovernor(address account) public view returns (bool) {
         if (
@@ -230,21 +246,21 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
         return Auth.authorize(address(STAKING_TOKEN));
     }
 
-    function setRewardsPool(address payable _rewardsPool)
-        public
-        virtual
-        override
-        authorized
-        returns (bool)
-    {
-        REWARDS_POOL_ALT = _rewardsPool;
-        return Auth.authorize(address(REWARDS_POOL_ALT));
-    }
+    // function setRewardsPool(address payable _rewardsPool)
+    //     public
+    //     virtual
+    //     override
+    //     authorized
+    //     returns (bool)
+    // {
+    //     REWARDS_POOL = _rewardsPool;
+    //     return Auth.authorize(address(REWARDS_POOL));
+    // }
 
     function setRewardsToken(address payable rewardsToken)
         public
         virtual
-        override
+        // override
         authorized
         returns (bool)
     {
@@ -308,19 +324,14 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
     {
         uint256 i = 0;
         while (i < accounts.length) {
-            uint256 balance = IERC20(REWARDS_TOKEN).balanceOf(address(this));
+            // uint256 balance = IERC20(REWARDS_TOKEN).balanceOf(address(this));
             uint256 tWallet = token[accounts[i]];
-            require(uint256(balance) >= uint256(0), "not enough token");
+            // require(uint256(balance) >= uint256(0), "not enough token");
             if (address(accounts[i]) != address(0)) {
                 if (uint256(tWallet) > uint256(0)) {
-                    if (
-                        IERC20(REWARDS_TOKEN).balanceOf(address(this)) >=
-                        uint256(tWallet)
-                    ) {
-                        require(
-                            Deliver_Reward_Tokens(uint256(tWallet), accounts[i])
-                        );
-                    }
+                    require(
+                        Deliver_Reward_Tokens(uint256(tWallet), accounts[i])
+                    );
                 }
             }
             i++;
@@ -378,7 +389,8 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
         require(balance >= amount, "Insufficient token balance");
         balance -= amount;
         require(set_Token(_address, balance));
-        require(IERC20(REWARDS_TOKEN).transfer(payable(_address), amount));
+        // require(IERC20(REWARDS_TOKEN).transfer(payable(_address), amount));
+        super._mint(_address, amount);
         token_paid[_address] += amount;
         emit Claim_Rewards(_address, amount, block.timestamp);
         return true;

@@ -21,18 +21,18 @@ interface ISTAKE_MGR {
     // function Crosschain_Shift(address wallet, uint crosschain, bool up, uint _poolId) external;
     function Testnet() external view  returns (bool);
     // function CrossChain() external view  returns (bool);
-    function estimates(uint amount,uint duration, uint _poolId) external view returns(uint);
+    // function estimates(uint amount,uint duration, uint _poolId) external view returns(uint);
     // function canUserClaim(address usersWallet, uint _poolId) external returns(bool);
     // function fundRewardsPool(uint256 tokenAmount, address payable token, address source, uint _poolId) external;
-    function newManager(address payable _manager, uint _poolId) external;
-    function stakePoolETHBalance() external view returns(uint);
-    function stakePoolBalance(uint _poolId) external view returns(uint);    
+    // function newManager(address payable _manager, uint _poolId) external;
+    // function stakePoolETHBalance() external view returns(uint);
+    // function stakePoolBalance(uint _poolId) external view returns(uint);    
     function setStakingToken(address payable token, uint _poolId) external returns(bool,bool,bool,bool);
-    function setRewardsToken(address payable token, uint _poolId) external returns(bool,bool,bool,bool);
+    function setRewardsToken(address payable token, uint _poolId) external returns(bool,bool,bool);
     // function stakePoolNetworkBalance(uint _poolId) external view returns(uint);
-    function estimateUserStakes(uint amount, uint _poolId) external view returns(uint,uint,uint,uint,uint,uint);
-    function rewardsPoolETHBalance(uint _poolId) external view returns(uint);
+    // function estimateUserStakes(uint amount, uint _poolId) external view returns(uint,uint,uint,uint,uint,uint);
+    // function rewardsPoolETHBalance(uint _poolId) external view returns(uint);
     function rewardsPoolBalance(uint _poolId) external view returns(uint);
-    function FaucetToken() external view returns (address payable);
-    function Faucet() external view returns (address payable);
+    // function FaucetToken() external view returns (address payable);
+    // function Faucet() external view returns (address payable);
 }

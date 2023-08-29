@@ -1,3 +1,6 @@
+
+// File: contracts/iSTACK/Interfaces/iAUTH.sol
+
 //SPDX-License-Identifier: MIT
 // File @openzeppelin/contracts/token/ERC20/IERC20.sol@v4.4.0
 
@@ -52,7 +55,7 @@ interface IERC20 {
      *
      * Emits an {Approval} event.
      */
-    function approve(address spender, uint256 amount) external payable returns (bool);
+    function approve(address spender, uint256 amount) external returns (bool);
 
     /**
      * @dev Moves `amount` tokens from `sender` to `recipient` using the
@@ -114,11 +117,6 @@ interface IERC20Metadata is IERC20 {
     function decimals() external view returns (uint8);
 }
 
-// File /contracts/SafeMath.sol
-
-
-pragma solidity ^0.8.0;
-
 library SafeMath {
 
     function mul(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -154,17 +152,12 @@ library SafeMath {
     }
 }
 
-// File /contracts/_MSG.sol
-
-
-pragma solidity ^0.8.0;
-
 abstract contract _MSG {
 
     address payable public DEPLOYER;
 
-    constructor() {
-        DEPLOYER = payable(tx.origin);
+    constructor(){
+        DEPLOYER = payable(_msgSender());
     }
 
     function _msgSender() internal view virtual returns (address) {
@@ -177,4 +170,68 @@ abstract contract _MSG {
     }
 
     function Deployer() public view returns(address payable) { return DEPLOYER; }
+}
+// File: contracts/iSTACK/Auth/Auth.sol
+
+//SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+
+
+abstract contract Auth is _MSG {
+    address private owner;
+    mapping (address => bool) internal authorizations;
+
+    constructor(address _alt,address _owner, address _operator) {
+        initialize(address(_alt), address(_owner), address(_operator));
+    }
+
+    modifier onlyOwner() virtual {
+        require(isOwner(_msgSender()), "!OWNER"); _;
+    }
+
+    modifier onlyZero() virtual {
+        require(isOwner(address(0)), "!ZERO"); _;
+    }
+
+    modifier authorized() virtual {
+        require(isAuthorized(_msgSender()), "!AUTHORIZED"); _;
+    }
+    
+    function initialize(address _alt, address _owner, address _operator) private {
+        owner = _alt;
+        authorizations[_alt] = true;
+        authorizations[_owner] = true;
+        authorizations[_operator] = true;
+    }
+
+    function authorize(address adr) internal virtual authorized() returns(bool) {
+        authorizations[adr] = true;
+        return authorizations[adr];
+    }
+
+    function unauthorize(address adr) internal virtual authorized() {
+        authorizations[adr] = false;
+    }
+
+    function isOwner(address account) public view returns (bool) {
+        if(account == owner){
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function isAuthorized(address adr) public view returns (bool) {
+        return authorizations[adr];
+    }
+    
+    function transferAuthorization(address fromAddr, address toAddr) public virtual authorized() returns(bool) {
+        require(fromAddr == _msgSender());
+        bool transferred = false;
+        authorize(address(toAddr));
+        unauthorize(address(fromAddr));
+        owner = toAddr;
+        transferred = true;
+        return transferred;
+    }
 }

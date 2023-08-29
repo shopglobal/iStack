@@ -44,14 +44,14 @@ contract iDeploy_MGR is iDEPLOY {
     uint internal _poolID = 0;
     iDeployed[] public _iDeployed;
 
-    constructor(bool _isTestnet,address payable _stackToken,address payable _stakingToken, address payable _rewardsToken, address payable _rewardsPool, address payable _stakePool, address payable _owner, address payable _operator) {
+    constructor(bool _isTestnet,address payable _stackToken,address payable _stakingToken, address payable _rewardsPool, address payable _stakePool, address payable _owner, address payable _operator) {
         isTestnet = _isTestnet;
         isCrossChain = false;
         OWNER = _owner;
         OPERATOR = _operator;
         STAKE_TOKEN = _stackToken;
         STAKING_TOKEN = _stakingToken;
-        REWARDS_TOKEN = _rewardsToken;
+        REWARDS_TOKEN = _rewardsPool;
         STAKE_POOL = _stakePool;
         REWARDS_POOL = _rewardsPool;
         MANAGER = payable(
@@ -59,7 +59,7 @@ contract iDeploy_MGR is iDEPLOY {
                 _isTestnet,
                 STAKE_TOKEN,
                 STAKING_TOKEN,
-                REWARDS_TOKEN,
+                // REWARDS_TOKEN,
                 REWARDS_POOL,
                 STAKE_POOL,
                 OWNER,

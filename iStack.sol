@@ -5,13 +5,8 @@ import "./Interfaces/ISTACK.sol";
 import "./StakePool/iStackPool.sol";
 import "./RewardsPool/iRewardsPool.sol";
 import "./Deploy/iDeploy_Manager.sol";
-import "./Token/ERC20.sol";
 
-contract iStack_Token is _MSG, ERC20 {
-    constructor() ERC20(unicode"Stacked", unicode"sETH", 18) {}
-}
-
-contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
+contract StakeToken_DeFi is _MSG, ERC20, Auth, ISTAKE {
     using SafeMath for uint256;
 
     address payable internal OWNER;
@@ -79,11 +74,11 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
 
     constructor(
         address payable _stakingToken,
-        address payable _rewardsToken,
+        // address payable _rewardsToken,
         address payable _owner,
         address payable _operator,
         bool isTestnet
-    ) Auth(address(_msgSender()), address(_owner), address(_operator)) {
+    ) Auth(address(_msgSender()), address(_owner), address(_operator)) ERC20(unicode"Stacked", unicode"sETH") {
         uint256 _pool_ID = 0;
         pools++;
         BP = 10000;
@@ -99,7 +94,6 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
 
         STAKE_TOKEN = payable(this);
         STAKING_TOKEN[_pool_ID] = _stakingToken;
-        REWARDS_TOKEN[_pool_ID] = _rewardsToken;
 
         STAKE_POOL = payable(
             new iVAULT_STAKE_POOL(
@@ -114,13 +108,14 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
             new iVAULT_REWARDS_POOL(
                 STAKE_TOKEN,
                 STAKING_TOKEN[_pool_ID],
-                REWARDS_TOKEN[_pool_ID],
+                // REWARDS_TOKEN[_pool_ID],
                 STAKE_POOL,
                 OWNER,
                 OPERATOR,
                 _pool_ID
             )
         );
+        REWARDS_TOKEN[_pool_ID] = REWARDS_POOL[_pool_ID];
 
         MANAGER = payable(
             address(
@@ -128,7 +123,7 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
                     isTestnet,
                     STAKE_TOKEN,
                     STAKING_TOKEN[_pool_ID],
-                    REWARDS_TOKEN[_pool_ID],
+                    // REWARDS_TOKEN[_pool_ID],
                     REWARDS_POOL[_pool_ID],
                     STAKE_POOL,
                     OWNER,
@@ -282,59 +277,59 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         return pools;
     }
 
-    function setIsMigrateable(
-        address _address,
-        uint256 _poolId,
-        bool _isMigrateable
-    ) public virtual authorized {
-        isMigrateable[_address][_poolId] = _isMigrateable;
-    }
+    // function setIsMigrateable(
+    //     address _address,
+    //     uint256 _poolId,
+    //     bool _isMigrateable
+    // ) public virtual authorized {
+    //     isMigrateable[_address][_poolId] = _isMigrateable;
+    // }
 
-    function iMigrate(address _iStack, uint256 _poolId) public virtual {
-        require(isMigrateable[_iStack][_poolId]);
-        User memory member = ISTAKE(_iStack).getStack_byWallet(
-            _msgSender(),
-            _poolId
-        );
-        require(
-            uint256(member.stack.id) != uint256(0),
-            "Only iStack holders can migrate"
-        );
-        require(
-            iMigrated[_msgSender()][_iStack][_poolId] == false,
-            "This iStack has already been migrated"
-        );
-        iMigrated[_msgSender()][_iStack][_poolId] = true;
-        address payable _ST = ISTAKE(_iStack).StakingToken(_poolId);
-        uint256 x = 0;
-        uint256 _p = 0;
-        address payable _s;
-        while (x < pools) {
-            address payable _st = StakingToken(x);
-            if (address(_st) == address(_ST)) {
-                _s = _st;
-                _p = x;
-                break;
-            } else {
-                x++;
-            }
-        }
-        require(
-            ISTAKE(payable(_iStack)).transfer_FromPool(
-                payable(_msgSender()),
-                payable(this),
-                _poolId,
-                member.stack.totalStaked
-            )
-        );
-        require(
-            ISTAKE(payable(_iStack)).unStakeToken(
-                member.stack.totalStaked,
-                _poolId
-            )
-        );
-        require(stakeToken(member.stack.totalStaked, _p));
-    }
+    // function iMigrate(address _iStack, uint256 _poolId) public virtual {
+    //     require(isMigrateable[_iStack][_poolId]);
+    //     User memory member = ISTAKE(_iStack).getStack_byWallet(
+    //         _msgSender(),
+    //         _poolId
+    //     );
+    //     require(
+    //         uint256(member.stack.id) != uint256(0),
+    //         "Only iStack holders can migrate"
+    //     );
+    //     require(
+    //         iMigrated[_msgSender()][_iStack][_poolId] == false,
+    //         "This iStack has already been migrated"
+    //     );
+    //     iMigrated[_msgSender()][_iStack][_poolId] = true;
+    //     address payable _ST = ISTAKE(_iStack).StakingToken(_poolId);
+    //     uint256 x = 0;
+    //     uint256 _p = 0;
+    //     address payable _s;
+    //     while (x < pools) {
+    //         address payable _st = StakingToken(x);
+    //         if (address(_st) == address(_ST)) {
+    //             _s = _st;
+    //             _p = x;
+    //             break;
+    //         } else {
+    //             x++;
+    //         }
+    //     }
+    //     require(
+    //         ISTAKE(payable(_iStack)).transfer_FromPool(
+    //             payable(_msgSender()),
+    //             payable(this),
+    //             _poolId,
+    //             member.stack.totalStaked
+    //         )
+    //     );
+    //     require(
+    //         ISTAKE(payable(_iStack)).unStakeToken(
+    //             member.stack.totalStaked,
+    //             _poolId
+    //         )
+    //     );
+    //     require(stakeToken(member.stack.totalStaked, _p));
+    // }
 
     function setSupply(uint256 _poolId, bool _supply) public authorized {
         SupplyCap[_poolId] = _supply;
@@ -361,9 +356,9 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         authorized
         returns (bool set)
     {
-        IREWARDSPOOL(REWARDS_POOL[_poolId]).setRewardsPool(_rewardsPool);
+        // IREWARDSPOOL(REWARDS_POOL[_poolId]).setRewardsPool(_rewardsPool);
         REWARDS_POOL[_poolId] = _rewardsPool;
-        set = Auth.authorize(address(REWARDS_POOL[_poolId]));
+        (set) = Auth.authorize(address(REWARDS_POOL[_poolId]));
         require(set);
         return set;
     }
@@ -374,7 +369,7 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         authorized
         returns (bool)
     {
-        REWARDS_TOKEN[_poolId] = token;
+        REWARDS_TOKEN[_poolId] = REWARDS_POOL[_poolId];
         TOKEN_POOL[token] = _poolId;
         return true;
     }
@@ -484,7 +479,7 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         }
         _user[_sender.stack.id][_poolId] = _sender.stack;
         _user[receiver.stack.id][_poolId] = receiver.stack;
-        require(_transfer(sender, _receiver, amount));
+        require(super._transfer(sender, _receiver, amount));
         _approve(
             sender,
             _msgSender(),
@@ -790,7 +785,7 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
                 _poolId
             )
         );
-        require(_mint(_msgSender(), tokenAmount));
+        require(super._mint(_msgSender(), tokenAmount));
         (uint256 pR, , , , bool userCanClaim) = checkUserStakes(
             _msgSender(),
             _poolId
@@ -879,7 +874,7 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
             "Wait"
         );
         require(uint256(amountToken) <= uint256(balanceOf(_msgSender())));
-        require(_burn(_msgSender(), amountToken));
+        require(super._burn(_msgSender(), amountToken));
         user.stack.totalStaked = amountToken.sub(amountToken);
         if (uint256(msg.value) >= uint256(0)) {
             OPERATOR.transfer(msg.value);
