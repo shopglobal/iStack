@@ -9,9 +9,6 @@ interface ISTAKEPOOL {
     function StakeToken() external view returns (address payable);
     function StakingToken(uint pool_id) external view returns (address payable);
     function RewardsToken(uint pool_id) external view returns(address payable);
-    // function Vaults() external returns (address payable[] memory);
-    // function Vault(uint _i) external returns (address payable);
-    // function deploy_iVault(uint pool_id) external returns(address payable);
     function Swap_iStack(uint256 amount, address payable from_address, address payable to_address, uint r_StackID, uint pool_id) external returns (bool);
     function setStakeToken(address payable token) external returns(bool); 
     function setStakingToken(address payable stakingToken, uint pool_id) external returns(bool);

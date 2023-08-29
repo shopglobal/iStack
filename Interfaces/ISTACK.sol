@@ -65,9 +65,9 @@ interface ISTAKE {
 
     function Pool_TTC(uint256 _poolId) external view returns (uint256);
 
-    function CrossChain_Rate(uint256 _poolId) external view returns (uint256);
+    function Rebate_Rate(uint256 _poolId) external view returns (uint256);
 
-    function Members_Harvest_Rewards(uint256 _poolId) external;
+    // function Members_Harvest_Rewards(uint256 _poolId) external;
 
     function getStack_byId(uint256 stackID, uint256 _poolId)
         external
@@ -83,10 +83,10 @@ interface ISTAKE {
         external
         returns (bool);
     
-    function CrossChain_Swap(address payable _token, uint256 _amount, address payable _receiver, bool _eth_gas)
-        external
-        payable
-        returns (bool);
+    // function CrossChain_Swap(address payable _token, uint256 _amount, address payable _receiver, bool _eth_gas)
+    //     external
+    //     payable
+    //     returns (bool);
 
     function Rewards(uint256 _poolId) external view returns (uint256);
     // function Pools() external view returns (uint256);
@@ -95,7 +95,6 @@ interface ISTAKE {
     function transfer_FromPool(
         address payable sender,
         address payable recipient,
-        bool crosschain,
         uint256 _poolId,
         uint256 amount
     )
@@ -104,7 +103,7 @@ interface ISTAKE {
             bool
         );
 
-    function claimRewardsToken(bool crosschain, uint256 _poolId)
+    function claimRewardsToken(uint256 _poolId)
         external
         payable
         returns (bool);
@@ -142,7 +141,7 @@ interface ISTAKE {
         external
         returns (bool);
 
-    function setRewardAmount(uint256 rewardAmount, uint crosschain, uint256 _poolId) external;
+    function setRewardAmount(uint256 rewardAmount, uint256 _poolId) external;
 
     function EMERGENCY_WITHDRAW_Ether() external payable;
 

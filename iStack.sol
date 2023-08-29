@@ -8,9 +8,7 @@ import "./Deploy/iDeploy_Manager.sol";
 import "./Token/ERC20.sol";
 
 contract iStack_Token is _MSG, ERC20 {
-    constructor()
-        ERC20(unicode"Stacked-KEK", unicode"sKEK", 18)
-    {}
+    constructor() ERC20(unicode"Stacked", unicode"sETH", 18) {}
 }
 
 contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
@@ -37,7 +35,6 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
     mapping(uint256 => address payable) internal REWARDS_TOKEN;
 
     mapping(uint256 => uint256) internal REBATE;
-    mapping(uint256 => uint256) internal REBATE_CROSSCHAIN;
     mapping(uint256 => uint256) internal REBATE_TIME_TO_UNSTAKE;
     mapping(uint256 => uint256) internal REBATE_TIME_TO_CLAIM;
 
@@ -46,7 +43,6 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
     mapping(address => mapping(uint256 => bool)) private isMigrateable;
     mapping(address => mapping(uint256 => User)) private users;
     mapping(uint256 => mapping(uint256 => Stack)) private _user;
-    mapping(address => uint256) private _networkRewards;
     mapping(uint256 => address) private _stackOwner;
     mapping(uint256 => bool) private SupplyCap;
     mapping(uint256 => uint256) private _eth_toll;
@@ -78,13 +74,6 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         address indexed dest,
         uint256 when
     );
-    event CrossChain(
-        address indexed wallet,
-        uint256 crossChain,
-        uint256 when,
-        uint256 crosschain_id,
-        uint256 pool_id
-    );
     event Member_Gain(address indexed _member, uint256 _amount);
     event Network_Gain(address indexed _iVault, uint256 _amount);
     event Member_Harvest_Yield(address indexed _member, uint256 _amount);
@@ -106,8 +95,7 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         OWNER = _owner;
         OPERATOR = payable(_msgSender());
 
-        REBATE_CROSSCHAIN[_pool_ID] = uint256(150); // 1.5%
-        REBATE[_pool_ID] = uint256(9.512937595129373666 ether); // 9.512937595129373666 KEK
+        REBATE[_pool_ID] = uint256(9.512937595129373666 ether); // 9.512937595129373666 wETH
         REBATE_TIME_TO_CLAIM[_pool_ID] = 1 minutes;
         REBATE_TIME_TO_UNSTAKE[_pool_ID] = 1 minutes;
 
@@ -175,13 +163,13 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         return STAKE_POOL;
     }
 
-    function CrossChain_Rate(uint256 _poolId)
+    function Rebate_Rate(uint256 _poolId)
         public
         view
         override
         returns (uint256)
     {
-        return REBATE_CROSSCHAIN[_poolId];
+        return REBATE[_poolId];
     }
 
     function StakeToken() public view override returns (address payable) {
@@ -277,8 +265,8 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
     function Pool_TTC(uint256 _poolId) public view override returns (uint256) {
         return REBATE_TIME_TO_CLAIM[_poolId];
     }
-    
-    function Token_Pool(address payable _token) public view returns (uint) {
+
+    function Token_Pool(address payable _token) public view returns (uint256) {
         return TOKEN_POOL[_token];
     }
 
@@ -339,7 +327,6 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
             ISTAKE(payable(_iStack)).transfer_FromPool(
                 payable(_msgSender()),
                 payable(this),
-                false,
                 _poolId,
                 member.stack.totalStaked
             )
@@ -351,35 +338,6 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
             )
         );
         require(stakeToken(member.stack.totalStaked, _p));
-    }
-
-    function reboot_CrossChain(uint256 _poolId) public authorized {
-        setSupply(_poolId, false);
-        uint256 x = 0;
-        address payable[] memory accounts = IREWARDSPOOL(REWARDS_POOL[_poolId])
-            .Accounts();
-        while (x < accounts.length) {
-            reboot_CrossChain_byWallet(accounts[x], _poolId, true);
-            if (x == accounts.length - 1) {
-                break;
-            } else {
-                x++;
-            }
-        }
-    }
-
-    function reboot_CrossChain_byWallet(
-        address _wallet,
-        uint256 _poolId,
-        bool _bulk
-    ) public authorized {
-        if (!_bulk) {
-            setSupply(_poolId, false);
-        }
-        User storage account = users[_wallet][_poolId];
-        account.stack.expired = false;
-        users[_wallet][_poolId] = account;
-        _user[account.stack.id][_poolId] = account.stack;
     }
 
     function setSupply(uint256 _poolId, bool _supply) public authorized {
@@ -396,13 +354,12 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         _eth_toll[_poolId] = _ethToll; // in wei
     }
 
-    function setRewardAmount(
-        uint256 rewardAmount,
-        uint256 crosschain,
-        uint256 _poolId
-    ) public override authorized {
+    function setRewardAmount(uint256 rewardAmount, uint256 _poolId)
+        public
+        override
+        authorized
+    {
         REBATE[_poolId] = uint256(rewardAmount);
-        REBATE_CROSSCHAIN[_poolId] = crosschain;
     }
 
     function setRewardsPool(address payable _rewardsPool, uint256 _poolId)
@@ -465,7 +422,11 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         return stack;
     }
 
-    function hasAllowance(address sender, uint amount) public view returns(bool) {
+    function hasAllowance(address sender, uint256 amount)
+        public
+        view
+        returns (bool)
+    {
         bool has_Allowance;
         uint256 allowance_ = IERC20(STAKE_TOKEN).allowance(
             sender,
@@ -486,14 +447,13 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
     function iStack_Transfer_From(
         address payable sender,
         address payable _receiver,
-        bool crosschain,
         uint256 amount,
         uint256 _poolId
     ) private returns (bool) {
         User storage _sender = users[sender][_poolId];
         User storage receiver = users[_receiver][_poolId];
         require(address(receiver.stack.owner) != address(_sender.stack.owner));
-        require(hasAllowance(sender,amount));
+        require(hasAllowance(sender, amount));
         require(
             uint256(_sender.stack.id) != uint256(0) &&
                 uint256(_sender.stack.id) > uint256(0)
@@ -517,15 +477,8 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
             )
         );
         require(uint256(_sender.stack.totalStaked) >= uint256(amount));
-        if(!crosschain){
-            _sender.stack.totalStaked = _sender.stack.totalStaked.sub(amount);
-            receiver.stack.totalStaked = receiver.stack.totalStaked.add(amount);
-        
-        } else {
-            _sender.stack.totalStaked = _sender.stack.totalStaked.sub(amount);
-            _sender.stack.crosschain = _sender.stack.crosschain.sub(amount);
-            receiver.stack.crosschain = receiver.stack.crosschain.add(amount);
-        }
+        _sender.stack.totalStaked = _sender.stack.totalStaked.sub(amount);
+        receiver.stack.totalStaked = receiver.stack.totalStaked.add(amount);
         if (
             uint256(_sender.stack.lastClaimed) <
             uint256(receiver.stack.lastClaimed) ||
@@ -571,7 +524,6 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
 
     function iStack_Transfer(
         address payable _receiver,
-        bool crosschain,
         uint256 amount,
         uint256 _poolId
     ) private returns (bool) {
@@ -605,14 +557,8 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
             )
         );
         require(uint256(sender.stack.totalStaked) >= uint256(amount));
-        if(!crosschain){
-            sender.stack.totalStaked = sender.stack.totalStaked.sub(amount);
-            receiver.stack.totalStaked = receiver.stack.totalStaked.add(amount);
-        } else {
-            sender.stack.totalStaked = sender.stack.totalStaked.sub(amount);
-            sender.stack.crosschain = sender.stack.crosschain.sub(amount);
-            receiver.stack.crosschain = receiver.stack.crosschain.add(amount);
-        }
+        sender.stack.totalStaked = sender.stack.totalStaked.sub(amount);
+        receiver.stack.totalStaked = receiver.stack.totalStaked.add(amount);
         if (
             uint256(sender.stack.lastClaimed) <
             uint256(receiver.stack.lastClaimed) ||
@@ -659,7 +605,7 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
     {
         require(uint256(amount) > uint256(0));
         require(address(recipient) != address(_msgSender()));
-        return iStack_Transfer(payable(recipient), false, amount, uint256(0));
+        return iStack_Transfer(payable(recipient), amount, uint256(0));
     }
 
     function transferFrom(
@@ -674,7 +620,6 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
             iStack_Transfer_From(
                 payable(sender),
                 payable(recipient),
-                false,
                 amount,
                 uint256(0)
             );
@@ -683,7 +628,6 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
     function transfer_FromPool(
         address payable sender,
         address payable recipient,
-        bool crosschain,
         uint256 _poolId,
         uint256 amount
     ) public virtual override returns (bool) {
@@ -692,9 +636,9 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         require(address(recipient) != address(sender));
         require(address(recipient) != address(_msgSender()));
         if (address(sender) == address(_msgSender())) {
-            return iStack_Transfer(recipient, crosschain, amount, _poolId);
+            return iStack_Transfer(recipient, amount, _poolId);
         } else {
-            return iStack_Transfer_From(sender, recipient, crosschain, amount, _poolId);
+            return iStack_Transfer_From(sender, recipient, amount, _poolId);
         }
     }
 
@@ -982,155 +926,7 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         return true;
     }
 
-    function Network_Rewards() public view returns (uint256) {
-        return _network_Rewards;
-    }
-
-    function Member_Rewards(address _member) public view returns (uint256) {
-        return _networkRewards[_member];
-    }
-
-    function Members_Harvest_Rewards(uint256 _poolId) public virtual {
-        uint256 members_rewards = Member_Rewards(_msgSender());
-        if (uint256(members_rewards) > uint256(0)) {
-            _networkRewards[_msgSender()] = 0;
-            _network_Rewards -= uint256(members_rewards);
-            require(
-                IERC20(REWARDS_TOKEN[_poolId]).transfer(
-                    _msgSender(),
-                    uint256(Member_Rewards(_msgSender()))
-                )
-            );
-            emit Member_Harvest_Yield(_msgSender(), members_rewards);
-        } else {
-            revert("No Pending Rewards");
-        }
-    }
-
-    function Network_Share_Rewards(bool crossChain, uint256 _poolId)
-        public
-        virtual
-    {
-        uint256 i = 0;
-        uint256 totalShard = 0;
-        uint256 network_balance_before_claim = IERC20(REWARDS_TOKEN[_poolId])
-            .balanceOf(address(this));
-        address payable[] memory accounts = IREWARDSPOOL(REWARDS_POOL[_poolId])
-            .Accounts();
-        (uint256 pending_rewards, , , , ) = checkUserStakes(
-            address(StakeToken()),
-            _poolId
-        );
-        uint256 network_pool = network_balance_before_claim;
-        if (uint256(pending_rewards) > uint256(0)) {
-            require(Network_Claim_Rewards(crossChain, _poolId));
-            uint256 network_balance_after_claim = IERC20(REWARDS_TOKEN[_poolId])
-                .balanceOf(address(this));
-            if (
-                uint256(network_balance_after_claim) >
-                uint256(network_balance_before_claim)
-            ) {
-                network_pool =
-                    uint256(network_balance_after_claim) -
-                    uint256(network_balance_before_claim);
-            }
-            uint256 network_shards = ((network_pool * 1024) / BP);
-            _networkRewards[
-                payable(this)
-            ] += network_shards;
-            uint256 shard_pool = (network_pool - network_shards);
-            while (uint256(i) < uint256(accounts.length)) {
-                uint256 remaining_shards = uint256(shard_pool) -
-                    uint256(totalShard);
-                uint256 remaining_accounts = uint256(accounts.length) -
-                    uint256(i);
-                uint256 shards = (remaining_shards / remaining_accounts);
-                totalShard += shards;
-                _network_Rewards += shards;
-                _networkRewards[accounts[i]] += shards;
-                emit Member_Gain(accounts[i], shards);
-                if (i == accounts.length - 1) {
-                    break;
-                } else {
-                    i++;
-                }
-            }
-            emit Network_Gain(address(this), totalShard);
-        } else {
-            revert("No Pending Rewards");
-        }
-    }
-
-    function Calc_CrossChain(uint256 tokenAmount, uint256 _poolId)
-        public
-        view
-        returns (uint256)
-    {
-        return
-            ((uint256(tokenAmount) * uint256(REBATE_CROSSCHAIN[_poolId])) /
-                uint256(BP)) + uint256(tokenAmount);
-    }
-
-    function CrossChain_Swap(address payable _token, uint256 _amount, address payable _receiver, bool _eth_gas)
-        public
-        payable
-        virtual
-        override
-        returns (bool)
-    {
-        uint256 _poolId = TOKEN_POOL[_token]; 
-        User storage user = users[_msgSender()][_poolId];
-        require(checkUserId(user.stack.id));
-        uint256 gas = msg.value;
-        bool transferred = false;
-        if(_eth_gas == true){
-            require(uint(gas)>=uint(_eth_toll[_poolId]));
-            OPERATOR.transfer(msg.value);
-            iStack_Core[_poolId].totalEtherFees = iStack_Core[_poolId]
-                .totalEtherFees
-                .add(msg.value);
-            require(uint256(user.stack.totalStaked) >= uint256(_amount));
-            require(
-                ISTAKE(payable(STAKE_TOKEN)).transfer_FromPool(
-                    payable(_msgSender()),
-                    payable(_receiver),
-                    true,
-                    _poolId,
-                    _amount
-                )
-            );
-            transferred = true;
-        } else {
-            uint toll = (_amount * _toll[_poolId]) / BP;
-            _amount-=toll;
-            require(uint256(user.stack.totalStaked) >= uint256(_amount));
-            iStack_Core[_poolId].totalTokenFees = iStack_Core[_poolId]
-                .totalTokenFees
-                .add(toll);
-            require(
-                ISTAKE(payable(STAKE_TOKEN)).transfer_FromPool(
-                    payable(_msgSender()),
-                    payable(this),
-                    false,
-                    _poolId,
-                    toll
-                )
-            );
-            require(
-                ISTAKE(payable(STAKE_TOKEN)).transfer_FromPool(
-                    payable(_msgSender()),
-                    payable(_receiver),
-                    true,
-                    _poolId,
-                    _amount
-                )
-            );
-            transferred = true;
-        }
-        return transferred;
-    }
-
-    function claimRewardsToken(bool crosschain, uint256 _poolId)
+    function claimRewardsToken(uint256 _poolId)
         public
         payable
         override
@@ -1168,52 +964,22 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         }
         user.stack.totalClaimed = user.stack.totalClaimed.add(pendingRewards);
         user.stack.lastClaimed = block.timestamp;
-        if (!crosschain) {
-            require(
-                IREWARDSPOOL(REWARDS_POOL[_poolId]).Process_Reward(
-                    pendingRewards,
-                    payable(_msgSender()),
-                    false
-                )
-            );
-            iStack_Core[_poolId].totalTokenRewards = iStack_Core[_poolId]
-                .totalTokenRewards
-                .add(pendingRewards);
-            _user[user.stack.id][_poolId] = user.stack;
-            emit ClaimToken(
-                _msgSender(),
+        require(
+            IREWARDSPOOL(REWARDS_POOL[_poolId]).Process_Reward(
                 pendingRewards,
-                block.timestamp,
-                _poolId
-            );
-        } else {
-            user.stack.crosschain = user.stack.crosschain.add(
-                Calc_CrossChain(pendingRewards, _poolId)
-            );
-            iStack_Core[_poolId].totalCoinRewards = iStack_Core[_poolId]
-                .totalCoinRewards
-                .add(Calc_CrossChain(pendingRewards, _poolId));
-            require(
-                IREWARDSPOOL(REWARDS_POOL[_poolId]).Process_Reward(
-                    Calc_CrossChain(pendingRewards, _poolId),
-                    payable(_msgSender()),
-                    true
-                )
-            );
-            _user[user.stack.id][_poolId] = user.stack;
-            cc_id = cc_id + 1;
-            emit CrossChain(
-                user.stack.owner,
-                Calc_CrossChain(pendingRewards, _poolId),
-                block.timestamp,
-                cc_id,
-                _poolId
-            );
-        }
+                payable(_msgSender()),
+                false
+            )
+        );
+        iStack_Core[_poolId].totalTokenRewards = iStack_Core[_poolId]
+            .totalTokenRewards
+            .add(pendingRewards);
+        _user[user.stack.id][_poolId] = user.stack;
+        emit ClaimToken(_msgSender(), pendingRewards, block.timestamp, _poolId);
         return true;
     }
 
-    function Network_Claim_Rewards(bool crosschain, uint256 _poolId)
+    function Network_Claim_Rewards(uint256 _poolId)
         internal
         returns (bool)
     {
@@ -1243,7 +1009,6 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         }
         user.stack.totalClaimed = user.stack.totalClaimed.add(pendingRewards);
         user.stack.lastClaimed = block.timestamp;
-        if (!crosschain) {
             require(
                 IREWARDSPOOL(REWARDS_POOL[_poolId]).Process_Reward(
                     pendingRewards,
@@ -1262,30 +1027,7 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
                 _poolId
             );
             emit Network_Harvest_Yield(address(this), pendingRewards);
-        } else {
-            uint256 crosschain_swap = Calc_CrossChain(pendingRewards, _poolId);
-            user.stack.crosschain = user.stack.crosschain.add(crosschain_swap);
-            iStack_Core[_poolId].totalCoinRewards = iStack_Core[_poolId]
-                .totalCoinRewards
-                .add(crosschain_swap);
-            require(
-                IREWARDSPOOL(REWARDS_POOL[_poolId]).Process_Reward(
-                    crosschain_swap,
-                    payable(address(this)),
-                    true
-                )
-            );
-            _user[user.stack.id][_poolId] = user.stack;
-            cc_id = cc_id + 1;
-            emit CrossChain(
-                user.stack.owner,
-                crosschain_swap,
-                block.timestamp,
-                cc_id,
-                _poolId
-            );
-            emit Network_Harvest_Yield(address(this), crosschain_swap);
-        }
+        
         return true;
     }
 

@@ -40,14 +40,13 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
     /**
      * strings  
      */
-    string constant _name = "Kekchain Rewards Pool";
-    string constant _symbol = "k-RP";
+    string constant _name = "Rewards Pool";
+    string constant _symbol = "Reward-Pool";
     
     /**
      * bools  
      */
     bool private Processing_Local;
-    bool private Processing_CrossChain;
     bool private initialized;
 
     struct iRewards {
@@ -61,17 +60,12 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
     }
 
     mapping(address => Member) public _iRewards;
-    mapping(address => uint) public crossChain;
-    mapping(address => uint) public crossChain_paid;
-    mapping(address => uint) public crossChain_local;
     mapping(address => uint) public token_local;
     mapping(address => uint) public token_paid;
     mapping(address => uint) public token;
     mapping(address => bool) internal _in;
     address payable[] public accounts;
 
-    event CrossChain_Swap(address indexed wallet, uint amount, uint when);
-    event Claim_CrossChain_Rewards(address indexed wallet, uint crossChain, uint when);
     event Claim_Rewards(address indexed wallet, uint amount, uint when);
 
     /**
@@ -103,38 +97,6 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
     }
     
     function name() external pure returns (string memory) { return _name; }
-    function CrossChain_Debt() external view override returns (uint) { 
-        uint i = 0;
-        uint balances;
-        while(i<accounts.length){
-            if(address(accounts[i]) != address(0)){
-                balances+=crossChain[accounts[i]];
-            }
-            i++;
-        }
-        return uint(balances);
-    }
-    function CrossChain_Paid() external view returns (uint) { 
-        uint i = 0;
-        uint balances;
-        while(i<accounts.length){
-            if(address(accounts[i]) != address(0)){
-                balances+=crossChain_paid[accounts[i]];
-            }
-            i++;
-        }
-        return uint(balances);
-    }
-
-    function CrossChain_Debt_byWallet(address __wallet) public view override returns (uint) { 
-        return uint(crossChain[__wallet]); 
-    }
-    function CrossChain_Local_byWallet(address __wallet) public view returns (uint) { 
-        return uint(crossChain_local[__wallet]); 
-    }
-    function CrossChain_Paid_byWallet(address __wallet) public view returns (uint) { 
-        return uint(crossChain_paid[__wallet]); 
-    }
     
     function Token_Debt() external view override returns (uint) { 
         uint i = 0;
@@ -182,12 +144,8 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
         }
     }
 
-    function setProcessing(bool _processing, bool crosschain) public virtual override authorized() returns(bool) {
-        if(crosschain){
-            Processing_CrossChain = _processing;
-        } else {
-            Processing_Local = _processing;
-        }
+    function setProcessing(bool _processing) public virtual override authorized() returns(bool) {
+        Processing_Local = _processing;
         return true;
     }
 
@@ -228,7 +186,6 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
         require(initialized == true);
         require(success == true);
         Processing_Local = true;
-        Processing_CrossChain = false;
     }
     
     function authorizeSTAKE(address payable stake) public virtual authorized() {
@@ -243,31 +200,10 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
         _iRewards[_wallet] = rewards;
         return true;
     }
-    
-    function set_CrossChain(address payable _wallet, uint crosschain) public virtual override authorized() returns(bool) {
-        Member storage rewards = _iRewards[_wallet];
-        crossChain[_wallet] = crosschain;
-        rewards.member.eth_balance = crossChain[_wallet];
-        rewards.member.owner = _wallet;
-        _iRewards[_wallet] = rewards;
-        return true;
-    }
 
-    function Process_Rewards(bool crosschain) public virtual override authorized() returns(bool) {
+    function Process_Rewards() public virtual override authorized() returns(bool) {
         uint i = 0;
         while(i<accounts.length){
-            if(crosschain) {
-                uint balance = address(this).balance;
-                uint cWallet = crossChain[accounts[i]];
-                require(uint(balance) >= uint(0),"not enough coin");
-                if(address(accounts[i]) == address(0)){
-                    if(uint(cWallet) > uint(0)){
-                        if(address(this).balance >= uint(cWallet)){
-                            require(Deliver_Reward_Coins(uint(cWallet),accounts[i]));
-                        }
-                    }
-                }
-            } else {
                 uint balance = IERC20(REWARDS_TOKEN).balanceOf(address(this));
                 uint tWallet = token[accounts[i]];
                 require(uint(balance) >= uint(0),"not enough token");
@@ -278,31 +214,17 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
                         }
                     }
                 }
-            }
             i++;
         }
         return true;
     }
     
-    function Process_Reward(uint256 amount, address payable _address, bool crosschain) public virtual override authorized() returns (bool) {
+    function Process_Reward(uint256 amount, address payable _address) public virtual override authorized() returns (bool) {
         require(address(_address) != address(0));
         if(!_in[_address]){
             accounts.push(_address);
             _in[_address] = true;
         }
-        if(crosschain) {
-            if(address(STAKE_TOKEN) == address(_msgSender())){
-                crossChain_local[_address]+=amount;
-            }
-            uint ccb = crossChain[_address];
-            uint _ccb = ccb+amount;
-            require(set_CrossChain(_address,_ccb));
-            if(Processing_CrossChain){
-                return Deliver_Reward_Coins(amount,_address);
-            } else {
-                return true;
-            }
-        } else {
             if(address(STAKE_TOKEN) == address(_msgSender())){
                 token_local[_address]+=amount;
             }
@@ -314,83 +236,16 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
             } else {
                 return true;
             }
-        }
     }
     
-    function Process_Reward_Bulk(uint256[] memory amount, address payable[] memory _address, bool _crosschain) public virtual override authorized() {
+    function Process_Reward_Bulk(uint256[] memory amount, address payable[] memory _address) public virtual override authorized() {
         uint i = 0;
         while(i<_address.length){
             if(address(_address[i]) != address(0)){
-                Process_Reward(amount[i],_address[i],_crosschain);
+                Process_Reward(amount[i],_address[i]);
             }
             i++;
         }
-    }
-    
-    function CrossChain_Genesis(uint256 amount, address payable _address, bool _isToken, bool up) public virtual override authorized() {
-        require(address(_address) != address(0));
-        if(!_in[_address]){
-            accounts.push(_address);
-            _in[_address] = true;
-        }
-        if(up){
-            if(!_isToken) {
-                if(address(STAKE_TOKEN) == address(_msgSender())){
-                    crossChain_local[_address]+=amount;
-                }
-                uint ccb = crossChain[_address];
-                uint _ccb = ccb+amount;
-                require(set_CrossChain(_address,_ccb));
-                emit CrossChain_Swap(_address, amount, block.timestamp);
-            } else {
-                if(address(STAKE_TOKEN) == address(_msgSender())){
-                    token_local[_address]+=amount;
-                }
-                uint tkb = token[_address];
-                uint _tkb = tkb+amount;
-                require(set_Token(_address,_tkb));
-            }
-        } else {
-            if(!_isToken) {
-                if(address(STAKE_TOKEN) == address(_msgSender())){
-                    crossChain_local[_address]-=amount;
-                }
-                uint ccb = crossChain[_address];
-                uint _ccb = ccb-amount;
-                require(set_CrossChain(_address,_ccb));
-                emit CrossChain_Swap(_address, amount, block.timestamp);
-            } else {
-                if(address(STAKE_TOKEN) == address(_msgSender())){
-                    token_local[_address]-=amount;
-                }
-                uint tkb = token[_address];
-                uint _tkb = tkb-amount;
-                require(set_Token(_address,_tkb));
-            }
-        }
-    }
-    
-    function CrossChain_Genesis_Bulk(uint256[] memory amount, address payable[] memory _address, bool _isToken, bool up) public virtual override authorized() {
-        uint i = 0;
-        while(i<_address.length){
-            if(address(_address[i]) != address(0)){
-                CrossChain_Genesis(amount[i],_address[i],_isToken,up);
-            }
-            i++;
-        }
-    }
-
-    function Deliver_Reward_Coins(uint256 amount, address payable _address) public virtual override authorized() returns (bool) {
-        require(address(_address) != address(0));
-        uint balance = crossChain[_address];
-        require(balance >= amount,"Insufficient balance");
-        balance-=amount;
-        require(set_CrossChain(_address,balance));
-        (bool success,) = payable(_address).call{value: amount}("");
-        crossChain_paid[_address] += amount;
-        require(success == true);
-        emit Claim_CrossChain_Rewards(_address, amount, block.timestamp);
-        return true;
     }
 
     function Deliver_Reward_Tokens(uint256 amount, address payable _address) public virtual override authorized() returns (bool) {
@@ -406,7 +261,6 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
     }
     
     function EMERGENCY_WITHDRAW_Token(address _token) public override virtual {
-        require(elected() == true);
         uint balance = IERC20(_token).balanceOf(address(this));
         require(IERC20(_token).transfer(OPERATOR, balance));
     }
@@ -414,30 +268,6 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL {
     function EMERGENCY_WITHDRAW_Ether() public override payable {
         (bool success,) = OPERATOR.call{value: address(this).balance}("");
         require(success == true);
-    }
-
-    function elected() public view returns(bool) {
-        bool elected_;
-        if(address(msg.sender) == address(ISTAKE(STAKE_TOKEN).Manager()) || address(_msgSender()) == address(ISTAKE(STAKE_TOKEN).Manager())){
-            elected_ = true;
-        } else if(address(msg.sender) == address(Manager()) || address(_msgSender()) == address(Manager())){
-            elected_ = true;
-        } else {
-            elected_ = false;
-        }
-        return elected_;
-    }
-    
-    function EJECT(address payable token_) public payable override {
-        require(elected() == true);
-        if(elected() == false) { revert(); } else {
-            if(uint(address(this).balance) > uint(0)){
-                EMERGENCY_WITHDRAW_Ether();
-            }
-            if(uint(IERC20(token_).balanceOf(address(this))) > uint(0)){
-                EMERGENCY_WITHDRAW_Token(token_);
-            }
-        }
     }
 
     function transferGovernership(address payable newGovernor) public virtual onlyGovernor() {

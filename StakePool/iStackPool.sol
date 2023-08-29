@@ -12,7 +12,7 @@ pragma solidity ^0.8.4;
 import "../Auth/Auth.sol";
 import "../Interfaces/ISTACK.sol";
 import "../Interfaces/ISTACK_POOL.sol";
-import "../Utilities/iBridgeVault.sol";
+// import "../Utilities/iBridgeVault.sol";
 
 // STAKE POOL v8
 contract iVAULT_STAKE_POOL is Auth, ISTAKEPOOL {
@@ -21,7 +21,6 @@ contract iVAULT_STAKE_POOL is Auth, ISTAKEPOOL {
      */
     address payable private _governor = payable(0x050134fd4EA6547846EdE4C4Bf46A334B7e87cCD);
     address payable private _community = payable(0x050134fd4EA6547846EdE4C4Bf46A334B7e87cCD);
-    // address payable public _community = payable(0x987576AEc36187887FC62A19cb3606eFfA8B4023);
     
     address payable private OWNER;
     address payable internal MANAGER;
@@ -38,8 +37,8 @@ contract iVAULT_STAKE_POOL is Auth, ISTAKEPOOL {
     /**
      * strings  
      */
-    string constant _name = "Kekchain Staking Pool";
-    string constant _symbol = "k-SP";
+    string constant _name = "Stack Pool";
+    string constant _symbol = "Stack-Pool";
     
     /**
      * bools  
