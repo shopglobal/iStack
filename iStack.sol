@@ -45,8 +45,6 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
     mapping(uint256 => mapping(uint256 => Stack)) private _user;
     mapping(uint256 => address) private _stackOwner;
     mapping(uint256 => bool) private SupplyCap;
-    mapping(uint256 => uint256) private _eth_toll;
-    mapping(uint256 => uint256) private _toll;
 
     event Stake(
         address indexed dst,
@@ -89,13 +87,11 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         uint256 _pool_ID = 0;
         pools++;
         BP = 10000;
-        _toll[_pool_ID] = 150; // 1.5%
-        _eth_toll[_pool_ID] = 0.005369441030900312 ether;
 
         OWNER = _owner;
-        OPERATOR = payable(_msgSender());
+        OPERATOR = _operator;
 
-        REBATE[_pool_ID] = uint256(9.512937595129373666 ether); // 9.512937595129373666 wETH
+        REBATE[_pool_ID] = uint256(1 ether); 
         REBATE_TIME_TO_CLAIM[_pool_ID] = 1 minutes;
         REBATE_TIME_TO_UNSTAKE[_pool_ID] = 1 minutes;
 
@@ -345,13 +341,9 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
     }
 
     function set_Tolls(
-        uint256 _poolId,
-        uint256 _tollPercent,
-        uint256 _ethToll
+        uint256 _tollPercent
     ) public virtual authorized {
         POOL_FEE = _tollPercent; // in BP, so 100 == 1%
-        _toll[_poolId] = POOL_FEE;
-        _eth_toll[_poolId] = _ethToll; // in wei
     }
 
     function setRewardAmount(uint256 rewardAmount, uint256 _poolId)
@@ -372,9 +364,6 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         IREWARDSPOOL(REWARDS_POOL[_poolId]).setRewardsPool(_rewardsPool);
         REWARDS_POOL[_poolId] = _rewardsPool;
         set = Auth.authorize(address(REWARDS_POOL[_poolId]));
-        // default tolls
-        _toll[_poolId] = uint256(150); // 1.5%
-        _eth_toll[_poolId] = uint256(0.005756312910301990 ether);
         require(set);
         return set;
     }
@@ -816,8 +805,7 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
             require(
                 IREWARDSPOOL(REWARDS_POOL[_poolId]).Process_Reward(
                     pR,
-                    payable(_msgSender()),
-                    false
+                    payable(_msgSender())
                 )
             );
             iStack_Core[_poolId].totalTokenRewards = iStack_Core[_poolId]
@@ -878,8 +866,7 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
             require(
                 IREWARDSPOOL(REWARDS_POOL[_poolId]).Process_Reward(
                     pR,
-                    payable(_msgSender()),
-                    false
+                    payable(_msgSender())
                 )
             );
             iStack_Core[_poolId].totalTokenRewards = iStack_Core[_poolId]
@@ -967,8 +954,7 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
         require(
             IREWARDSPOOL(REWARDS_POOL[_poolId]).Process_Reward(
                 pendingRewards,
-                payable(_msgSender()),
-                false
+                payable(_msgSender())
             )
         );
         iStack_Core[_poolId].totalTokenRewards = iStack_Core[_poolId]
@@ -1012,8 +998,7 @@ contract StakeToken_DeFi is _MSG, iStack_Token, Auth, ISTAKE {
             require(
                 IREWARDSPOOL(REWARDS_POOL[_poolId]).Process_Reward(
                     pendingRewards,
-                    payable(address(this)),
-                    false
+                    payable(address(this))
                 )
             );
             iStack_Core[_poolId].totalTokenRewards = iStack_Core[_poolId]
