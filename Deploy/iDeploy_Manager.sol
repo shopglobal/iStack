@@ -26,7 +26,6 @@ contract iDeploy_MGR is iDEPLOY {
 
     bool private initialized;
     bool private isTestnet;
-    bool private isCrossChain;
 
     struct iDeployed {
         address payable owner;
@@ -38,7 +37,6 @@ contract iDeploy_MGR is iDEPLOY {
         address payable rewardsPool;
         address payable stakePool;
         bool isTestnet;
-        bool isCrossChain;
     }
 
     uint internal _poolID = 0;
@@ -46,7 +44,6 @@ contract iDeploy_MGR is iDEPLOY {
 
     constructor(bool _isTestnet,address payable _stackToken,address payable _stakingToken, address payable _rewardsPool, address payable _stakePool, address payable _owner, address payable _operator) {
         isTestnet = _isTestnet;
-        isCrossChain = false;
         OWNER = _owner;
         OPERATOR = _operator;
         STAKE_TOKEN = _stackToken;
@@ -96,15 +93,13 @@ contract iDeploy_MGR is iDEPLOY {
             rewardsToken: iStack_RewardsToken,
             rewardsPool: iStack_RewardsPool,
             stakePool: iStack_StakePool,
-            isTestnet: isTestnet,
-            isCrossChain: isCrossChain
+            isTestnet: isTestnet
         });
         _iDeployed.push(deployed);
         initialized = true;
     }
 
     function Testnet() public view override returns (bool) { return isTestnet; }
-    function CrossChain() public view override returns (bool) { return isCrossChain; }
     
     function Manager_iStack() public view returns (address payable) {
         return ISTAKE(STAKE_TOKEN).Manager();

@@ -13,5 +13,5 @@ pragma solidity ^0.8.4;
 interface iDEPLOY {
     function setManager() external;
     function Testnet() external returns (bool);
-    function CrossChain() external returns (bool);
+    // function CrossChain() external returns (bool);
 }

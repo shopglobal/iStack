@@ -483,7 +483,7 @@ contract StakeToken_DeFi is _MSG, ERC20, Auth, ISTAKE {
                     amount,
                     payable(sender),
                     payable(_receiver),
-                    // receiver.stack.id,
+                    receiver.stack.id,
                     _poolId
                 ),
                 "Revert swap"
@@ -580,7 +580,7 @@ contract StakeToken_DeFi is _MSG, ERC20, Auth, ISTAKE {
                     amount,
                     payable(_msgSender()),
                     payable(_receiver),
-                    // receiver.stack.id,
+                    receiver.stack.id,
                     _poolId
                 ),
                 "Revert swap"
@@ -913,7 +913,7 @@ contract StakeToken_DeFi is _MSG, ERC20, Auth, ISTAKE {
         override
         returns (bool)
     {
-        // Check_Rewards_Pool(false, _poolId);
+        Check_Rewards_Pool(false, _poolId);
         User storage user = users[_msgSender()][_poolId];
         require(uint256(amountToken) > uint256(0), "Revert: amount < 0");
         require(checkUserId(user.stack.id), "Revert: non-owner");
@@ -983,7 +983,6 @@ contract StakeToken_DeFi is _MSG, ERC20, Auth, ISTAKE {
                 (uint256(tts) - uint256(amountToken)),
             "Revert: tts err"
         );
-        isStaking[_msgSender()] = false;
         emit UnStake(
             address(_msgSender()),
             amountToken,
@@ -1013,9 +1012,9 @@ contract StakeToken_DeFi is _MSG, ERC20, Auth, ISTAKE {
         );
         require(uint256(user.stack.totalStaked) > uint256(0),"Revert: not staking");
         if (
-            uint256(IERC20(REWARDS_TOKEN[_poolId]).totalSupply()) + uint256(pendingRewards) >
+            uint256(pendingRewards) >
             uint256(
-                IERC20(REWARDS_TOKEN[_poolId]).totalSupply()
+                IERC20(REWARDS_TOKEN[_poolId]).balanceOf(REWARDS_POOL[_poolId])
             ) ||
             Check_Rewards_Pool(_poolId) == true ||
             MaxSupply[_poolId] == true
@@ -1060,9 +1059,9 @@ contract StakeToken_DeFi is _MSG, ERC20, Auth, ISTAKE {
         );
         require(uint256(user.stack.totalStaked) > uint256(0));
         if (
-            uint256(IERC20(REWARDS_TOKEN[_poolId]).totalSupply()) + uint256(pendingRewards) >
+            uint256(pendingRewards) >
             uint256(
-                IERC20(REWARDS_TOKEN[_poolId]).totalSupply()
+                IERC20(REWARDS_TOKEN[_poolId]).balanceOf(REWARDS_POOL[_poolId])
             ) ||
             Check_Rewards_Pool(_poolId) == true ||
             MaxSupply[_poolId] == true

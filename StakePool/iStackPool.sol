@@ -252,16 +252,16 @@ contract iVAULT_STAKE_POOL is Auth, ISTAKEPOOL {
         uint256 pool_id
     ) public virtual override onlyStake returns (bool) {
         require(address(_address) != address(0));
-        uint256 stackId = ISTAKE(address(STAKE_TOKEN))
-            .getStack_byWallet(_address, _poolId)
-            .stack
-            .id;
+        // uint256 stackId = ISTAKE(address(STAKE_TOKEN))
+        //     .getStack_byWallet(_address, _poolId)
+        //     .stack
+        //     .id;
         user_balances[address(_address)][
             address(STAKING_TOKEN[pool_id])
         ] += amount;
-        stack_balance[stackId][address(STAKING_TOKEN[pool_id])] = user_balances[
-            address(_address)
-        ][address(STAKING_TOKEN[pool_id])];
+        // stack_balance[stackId][address(STAKING_TOKEN[pool_id])] = user_balances[
+        //     address(_address)
+        // ][address(STAKING_TOKEN[pool_id])];
         return true;
     }
 
@@ -271,24 +271,25 @@ contract iVAULT_STAKE_POOL is Auth, ISTAKEPOOL {
         uint256 pool_id
     ) public virtual override onlyStake returns (bool) {
         require(address(_address) != address(0));
-        uint256 stackId = ISTAKE(address(STAKE_TOKEN))
-            .getStack_byWallet(_address, _poolId)
-            .stack
-            .id;
+        // uint256 stackId = ISTAKE(address(STAKE_TOKEN))
+        //     .getStack_byWallet(_address, _poolId)
+        //     .stack
+        //     .id;
         uint256 user_balance = user_balances[address(_address)][
             address(STAKING_TOKEN[pool_id])
         ];
-        uint256 stack_balances = stack_balance[stackId][
-            address(STAKING_TOKEN[pool_id])
-        ];
+        // uint256 stack_balances = stack_balance[stackId][
+        //     address(STAKING_TOKEN[pool_id])
+        // ];
         if (
-            uint256(user_balance) > uint256(0) ||
-            uint256(stack_balances) > uint256(0)
+            uint256(user_balance) > uint256(0)
+            //  ||
+            // uint256(stack_balances) > uint256(0)
         ) {
-            require(
-                uint256(stack_balances) >= uint256(amount),
-                "not enough token in this iStack"
-            );
+            // require(
+            //     uint256(stack_balances) >= uint256(amount),
+            //     "not enough token in this iStack"
+            // );
             require(
                 uint256(user_balance) >= uint256(amount),
                 "not enough iStack balance on account"
@@ -303,11 +304,11 @@ contract iVAULT_STAKE_POOL is Auth, ISTAKEPOOL {
             user_balances[address(_address)][
                 address(STAKING_TOKEN[pool_id])
             ] -= amount;
-            stack_balance[stackId][
-                address(STAKING_TOKEN[pool_id])
-            ] = user_balances[address(_address)][
-                address(STAKING_TOKEN[pool_id])
-            ];
+            // stack_balance[stackId][
+            //     address(STAKING_TOKEN[pool_id])
+            // ] = user_balances[address(_address)][
+            //     address(STAKING_TOKEN[pool_id])
+            // ];
             return true;
         } else {
             revert("not enough staked token");
@@ -318,7 +319,7 @@ contract iVAULT_STAKE_POOL is Auth, ISTAKEPOOL {
         uint256 amount,
         address payable from_address,
         address payable to_address,
-        uint256 r_StackID,
+        // uint256 r_StackID,
         uint256 pool_id
     ) public virtual override onlyStake returns (bool) {
         require(
@@ -326,27 +327,28 @@ contract iVAULT_STAKE_POOL is Auth, ISTAKEPOOL {
                 address(from_address) != address(0),
             "Burn prevention"
         );
-        uint256 stackId_from = ISTAKE(address(STAKE_TOKEN))
-            .getStack_byWallet(from_address, _poolId)
-            .stack
-            .id;
-        uint256 stack_balances = balanceOf_iStack(
-            stackId_from,
-            address(STAKING_TOKEN[pool_id])
-        );
+        // uint256 stackId_from = ISTAKE(address(STAKE_TOKEN))
+        //     .getStack_byWallet(from_address, _poolId)
+        //     .stack
+        //     .id;
+        // uint256 stack_balances = balanceOf_iStack(
+        //     stackId_from,
+        //     address(STAKING_TOKEN[pool_id])
+        // );
         uint256 user_balance = balance(
             address(from_address),
             address(STAKING_TOKEN[pool_id])
         );
-        uint256 stackId_to = r_StackID;
+        // uint256 stackId_to = r_StackID;
         if (
-            uint256(user_balance) > uint256(0) ||
-            uint256(stack_balances) > uint256(0)
+            uint256(user_balance) > uint256(0)
+            //  ||
+            // uint256(stack_balances) > uint256(0)
         ) {
-            require(
-                uint256(stack_balances) >= uint256(amount),
-                "not enough token in this iStack"
-            );
+            // require(
+            //     uint256(stack_balances) >= uint256(amount),
+            //     "not enough token in this iStack"
+            // );
             require(
                 uint256(user_balance) >= uint256(amount),
                 "not enough iStack balance on account"
@@ -354,19 +356,19 @@ contract iVAULT_STAKE_POOL is Auth, ISTAKEPOOL {
             user_balances[address(from_address)][
                 address(STAKING_TOKEN[pool_id])
             ] -= amount;
-            stack_balance[stackId_from][
-                address(STAKING_TOKEN[pool_id])
-            ] = user_balances[address(from_address)][
-                address(STAKING_TOKEN[pool_id])
-            ];
+            // stack_balance[stackId_from][
+            //     address(STAKING_TOKEN[pool_id])
+            // ] = user_balances[address(from_address)][
+            //     address(STAKING_TOKEN[pool_id])
+            // ];
             user_balances[address(to_address)][
                 address(STAKING_TOKEN[pool_id])
             ] += amount;
-            stack_balance[stackId_to][
-                address(STAKING_TOKEN[pool_id])
-            ] = user_balances[address(to_address)][
-                address(STAKING_TOKEN[pool_id])
-            ];
+            // stack_balance[stackId_to][
+            //     address(STAKING_TOKEN[pool_id])
+            // ] = user_balances[address(to_address)][
+            //     address(STAKING_TOKEN[pool_id])
+            // ];
             return true;
         } else {
             revert("not enough staked token");

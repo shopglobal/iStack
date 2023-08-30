@@ -89,7 +89,7 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL, ERC20 {
     )
         payable
         Auth(address(_owner), address(_operator), _msgSender())
-        ERC20("iRewards", "iREWARDS")
+        ERC20("iRewards Duo Token", "DUG")
     {
         _governor = payable(_operator);
         _poolId = _pool_Id;
@@ -121,7 +121,7 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL, ERC20 {
     }
 
     function burn(uint256 value) external {
-        super._burn(_msgSender(), value);
+        ERC20._burn(_msgSender(), value);
     }
 
     function Token_Debt() external view override returns (uint256) {
@@ -351,9 +351,6 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL, ERC20 {
             accounts.push(_address);
             _in[_address] = true;
         }
-        if (address(STAKE_TOKEN) == address(_msgSender())) {
-            token_local[_address] += amount;
-        }
         uint256 tkb = token[_address];
         uint256 _tkb = tkb + amount;
         require(set_Token(_address, _tkb));
@@ -387,12 +384,31 @@ contract iVAULT_REWARDS_POOL is Auth, IREWARDSPOOL, ERC20 {
         require(address(_address) != address(0));
         uint256 balance = token[_address];
         require(balance >= amount, "Insufficient token balance");
-        balance -= amount;
-        require(set_Token(_address, balance));
-        // require(IERC20(REWARDS_TOKEN).transfer(payable(_address), amount));
-        super._mint(_address, amount);
-        token_paid[_address] += amount;
-        emit Claim_Rewards(_address, amount, block.timestamp);
+        if (
+            (IERC20(address(this)).totalSupply() + amount) >=
+            ISTAKE(STAKE_TOKEN).Supply_Cap(_poolId)
+        ) {
+            uint256 remainder = ISTAKE(STAKE_TOKEN).Supply_Cap(_poolId) -
+                IERC20(address(this)).totalSupply();
+            amount = remainder;
+            balance -= amount;
+            if((IERC20(address(this)).totalSupply() + amount) <=
+            ISTAKE(STAKE_TOKEN).Supply_Cap(_poolId)){
+                require(set_Token(_address, balance));
+                // require(IERC20(REWARDS_TOKEN).transfer(payable(_address), amount));
+                ERC20._mint(_address, amount);
+                token_paid[_address] += amount;
+                emit Claim_Rewards(_address, amount, block.timestamp);
+            }
+        } else {
+            balance -= amount;
+            require(set_Token(_address, balance));
+            // require(IERC20(REWARDS_TOKEN).transfer(payable(_address), amount));
+            ERC20._mint(_address, amount);
+            token_paid[_address] += amount;
+            emit Claim_Rewards(_address, amount, block.timestamp);
+        }
+        
         return true;
     }
 

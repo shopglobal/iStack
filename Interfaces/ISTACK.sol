@@ -32,7 +32,7 @@ interface ISTAKE {
 
     function Operator() external view returns (address payable);
 
-    function Manager() external view returns (address payable);
+    // function Manager() external view returns (address payable);
 
     function StakePool() external view returns (address payable);
 
@@ -52,6 +52,11 @@ interface ISTAKE {
         external
         view
         returns (address payable);
+
+    function Supply_Cap(uint256 _poolId)
+        external
+        view
+        returns (uint256);
 
     function TotalETHFees(uint256 _poolId) external view returns (uint256);
 
@@ -137,9 +142,9 @@ interface ISTAKE {
         external
         returns (bool);
 
-    function setManager(address payable _manager, uint256 _poolId)
-        external
-        returns (bool);
+    // function setManager(address payable _manager, uint256 _poolId)
+    //     external
+    //     returns (bool);
 
     function setRewardAmount(uint256 rewardAmount, uint256 _poolId) external;
 
